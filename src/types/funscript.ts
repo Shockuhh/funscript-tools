@@ -32,7 +32,7 @@ export type FunscriptAction = {
   pos: number
 }
 
-type FunscriptAxis = {
+export type FunscriptAxis = {
   id: string
   actions: FunscriptAction[]
 }

@@ -1,8 +1,14 @@
 import { getContext, setContext } from 'svelte'
-import { FunscriptSourceSchema, type FunscriptSource } from '$types/funscript'
+import {
+  FunscriptSourceSchema,
+  type FunscriptSource,
+  type FunscriptAxis,
+  type FunscriptAction
+} from '$types/funscript'
 import { z } from 'zod'
 import { m } from '$lib/paraglide/messages'
 import { toast } from 'svelte-sonner'
+import { axisIdToFileMidExtension } from './funscript-maps'
 
 type FileSource = {
   name: string
@@ -19,6 +25,37 @@ export class FilesState {
     this.fileSources = []
   }
 
+  #separateAxes: (file: File, funscriptSource: FunscriptSource) => FileSource[] = (
+    file,
+    funscriptSource
+  ) => {
+    const strokeAxis: FileSource = {
+      name: file.name,
+      size: file.size,
+      source: funscriptSource
+    }
+
+    if (!funscriptSource.axes) {
+      return [strokeAxis]
+    }
+
+    let separatedAxes: FileSource[] = []
+    funscriptSource.axes.forEach((axis) => {
+      const midExtension = axisIdToFileMidExtension.get(axis.id)
+      const [baseName, extension] = file.name.split('.')
+
+      const axisSource: FileSource = {
+        name: `${baseName}${midExtension}.${extension}`,
+        size: file.size, // not perfect since this will reflect the size of the combined script, but likely won't be used?
+        source: axis
+      }
+
+      separatedAxes.push(axisSource)
+    })
+
+    return separatedAxes
+  }
+
   getFiles = () => {
     return this.files
   }
@@ -28,27 +65,40 @@ export class FilesState {
   }
 
   addFile = (file: File) => {
-    this.files.push(file)
+    if (this.files.some((f) => f.name === file.name && f.size === file.size)) {
+      toast.warning(m.duplicate_funscript_file_uploaded())
+      return
+    }
 
-    file.text().then((source) => {
-      const parseResult = FunscriptSourceSchema.safeParse(source)
+    let parseSuccess = false
+    file
+      .text()
+      .then((source) => {
+        const parseResult = FunscriptSourceSchema.safeParse(JSON.parse(source))
 
-      if (!parseResult.success) {
-        toast.error(m.funscript_parse_error_title(), {
-          description: m.funscript_parse_error_description({ error: parseResult.error.format() })
-        })
-        return
-      }
+        if (!parseResult.success) {
+          const errorMessage = parseResult.error.issues.map((issue) => issue.message).join('\n')
 
-      const fileSource: FileSource = {
-        name: file.name,
-        size: file.size,
-        source: parseResult.data
-      }
+          toast.error(m.funscript_parse_error_title(), {
+            description: m.funscript_parse_error_description({ error: errorMessage })
+          })
+          console.warn(parseResult.error)
+          return
+        } else {
+          parseSuccess = true
+        }
 
-      console.log('File source:', fileSource)
-      this.fileSources.push(fileSource)
-    })
+        const separatedAxes = this.#separateAxes(file, parseResult.data ?? [])
+
+        this.fileSources = [...this.fileSources, ...separatedAxes]
+      })
+      .finally(() => {
+        if (parseSuccess) {
+          toast.success(m.heatmap_generator_upload_success_title({ fileName: file.name }))
+
+          this.files.push(file)
+        }
+      })
   }
 
   removeFile = (file: File) => {

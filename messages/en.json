@@ -13,6 +13,7 @@
   "heatmap_generator_generate_heatmap": "Generate heatmap",
   "heatmap_generator_download_heatmap": "Download heatmap (.png)",
   "heatmap_generator_error_message": "An error occurred while generating the heatmap.",
+  "duplicate_funscript_file_uploaded": "This funscript file has already been uploaded.",
   "funscript_parse_error_title": "Unable to parse funscript",
   "funscript_parse_error_description": "Double check that your file is a valid Funscript file. Details: {error}",
   "sidebar_title": "Funscript tools",

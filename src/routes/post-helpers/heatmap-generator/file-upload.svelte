@@ -17,8 +17,6 @@
     await Promise.allSettled(
       files.map((file) => {
         filesState.addFile(file)
-
-        toast.success(m.heatmap_generator_upload_success_title({ fileName: file.name }))
       })
     )
   }

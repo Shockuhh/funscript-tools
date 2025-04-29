@@ -12,7 +12,7 @@
 
 <Sidebar.Provider>
   <ModeWatcher />
-  <Toaster />
+  <Toaster richColors />
   <AppSidebar data={data} />
   <SidebarInset>
     <div class="m-2 flex justify-between">
